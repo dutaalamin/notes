@@ -2181,21 +2181,6 @@ export default function App() {
                 if (modalImages.length === 0) return null;
                 return (
                   <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-[#8A7977]">Attached Photos ({modalImages.length})</span>
-                      <button
-                        onClick={() => handleRealAIScan(activeNoteModal)}
-                        disabled={scanningId === activeNoteModal.id}
-                        className="bg-[#F3E5D8] hover:bg-[#E8D4C1] text-[#8C5E32] text-xs font-extrabold px-3 py-1.5 rounded-xl flex items-center gap-1.5 shadow-xs transition-all active:scale-95 disabled:opacity-50"
-                      >
-                        <Sparkles size={14} className={scanningId === activeNoteModal.id ? 'animate-spin' : ''} />
-                        <span>
-                          {scanningId === activeNoteModal.id
-                            ? (scanStatus[activeNoteModal.id] || 'Scanning...')
-                            : 'Extract Text with AI (Free)'}
-                        </span>
-                      </button>
-                    </div>
                     {modalImages.map((img, idx) => (
                       <div key={idx} className="relative rounded-2xl overflow-hidden border border-[#E8DAC8] bg-[#F7EFE5]">
                         <img
@@ -2349,16 +2334,31 @@ export default function App() {
                   </div>
                   
                   {!isEditingText ? (
-                    <button
-                      onClick={() => {
-                        setEditTextContent(formatCleanNoteContent(activeNoteModal.content));
-                        setIsEditingText(true);
-                      }}
-                      className="text-xs font-bold text-[#8C5E32] hover:text-[#5C3E20] bg-white border border-[#E8DAC8] hover:border-[#C89B68] hover:bg-[#FAF0E6] px-3 py-1.5 rounded-xl flex items-center gap-1.5 transition-all shadow-sm active:scale-95"
-                    >
-                      <SquarePen size={13} />
-                      <span>Edit Text</span>
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleRealAIScan(activeNoteModal)}
+                        disabled={scanningId === activeNoteModal.id}
+                        className="bg-[#F3E5D8] hover:bg-[#E8D4C1] text-[#8C5E32] text-xs font-extrabold px-3 py-1.5 rounded-xl flex items-center gap-1.5 shadow-xs transition-all active:scale-95 disabled:opacity-50"
+                      >
+                        <Sparkles size={13} className={scanningId === activeNoteModal.id ? 'animate-spin' : ''} />
+                        <span>
+                          {scanningId === activeNoteModal.id
+                            ? (scanStatus[activeNoteModal.id] || 'Scanning...')
+                            : 'AI Scan'}
+                        </span>
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          setEditTextContent(formatCleanNoteContent(activeNoteModal.content));
+                          setIsEditingText(true);
+                        }}
+                        className="text-xs font-bold text-[#8C5E32] hover:text-[#5C3E20] bg-white border border-[#E8DAC8] hover:border-[#C89B68] hover:bg-[#FAF0E6] px-3 py-1.5 rounded-xl flex items-center gap-1.5 transition-all shadow-sm active:scale-95"
+                      >
+                        <SquarePen size={13} />
+                        <span>Edit Text</span>
+                      </button>
+                    </div>
                   ) : (
                     <div className="flex items-center gap-2">
                       <button
@@ -2415,7 +2415,7 @@ export default function App() {
                 className="text-xs font-bold text-[#A04040] hover:bg-[#FDF0F0] px-3.5 py-2 rounded-xl flex items-center gap-1.5 transition-colors"
               >
                 <Trash2 size={14} />
-                <span>Delete Note</span>
+                <span>Delete File</span>
               </button>
 
               <div className="flex items-center gap-2">
