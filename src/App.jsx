@@ -30,7 +30,8 @@ import {
   LogOut,
   LogIn,
   Lock,
-  Mail
+  Mail,
+  HardDrive
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from './supabaseClient';
@@ -821,6 +822,36 @@ export default function App() {
     return folders;
   }, [folders]);
 
+  // Dynamic Storage Usage Calculation
+  const { storagePercent, usedDisplay } = useMemo(() => {
+    const totalStorageLimitMB = 500;
+    let sumMB = 0;
+
+    userNotes.forEach((n) => {
+      if (n.size) {
+        const parsed = parseFloat(n.size);
+        if (!isNaN(parsed)) {
+          sumMB += parsed;
+        }
+      } else if (n.content) {
+        sumMB += (n.content.length / (1024 * 1024));
+      } else {
+        sumMB += 0.2;
+      }
+    });
+
+    const percent = Math.min(Math.round((sumMB / totalStorageLimitMB) * 100), 100);
+    const displayPercent = sumMB > 0 ? Math.max(percent, 1) : 0;
+    const displaySize = sumMB >= 1024 
+      ? `${(sumMB / 1024).toFixed(2)} GB` 
+      : `${sumMB.toFixed(1)} MB`;
+
+    return {
+      storagePercent: displayPercent,
+      usedDisplay: `${displaySize} / 500 MB`
+    };
+  }, [userNotes]);
+
   // Filter notes
   const filteredNotes = userNotes.filter(n => {
     const matchesNav = 
@@ -1320,23 +1351,29 @@ export default function App() {
         </div>
 
         {/* Bottom Storage Card Widget */}
-        <div className={`${t.bgCardSubtle} border ${t.border} rounded-2xl p-4 space-y-2.5`}>
+        <div className={`${t.bgCardSubtle} border ${t.border} rounded-2xl p-4 space-y-2.5 shadow-xs`}>
           <div className="flex items-center justify-between text-xs">
             <span className={`font-bold ${t.textMuted} flex items-center gap-1.5`}>
-              <BookOpen size={14} className={t.textAccent} />
-              Note Storage
+              <HardDrive size={14} className={t.textAccent} />
+              Storage
             </span>
-            <span className={`font-bold ${t.textAccent}`}>0% used</span>
+            <span className={`font-bold ${t.textAccent}`}>{storagePercent}% used</span>
           </div>
 
-          <div className={`w-full h-1.5 ${t.border} rounded-full overflow-hidden`}>
-            <div className={`h-full ${t.bgAccent} w-[2%] rounded-full`}></div>
+          <div className={`w-full h-2 ${t.border} rounded-full overflow-hidden bg-gray-200/50`}>
+            <div 
+              className={`h-full ${t.bgAccent} rounded-full transition-all duration-500`}
+              style={{ width: `${Math.max(storagePercent, 3)}%` }}
+            ></div>
           </div>
 
-          <p className={`text-[10px] ${t.textMuted} font-medium flex items-center gap-1`}>
-            <CheckCircle2 size={11} className={t.textAccent} />
-            Storage Connected
-          </p>
+          <div className="flex items-center justify-between text-[10px]">
+            <p className={`${t.textMuted} font-semibold flex items-center gap-1`}>
+              <CheckCircle2 size={11} className={t.textAccent} />
+              Storage Connected
+            </p>
+            <span className={`${t.textMuted} font-bold`}>{usedDisplay}</span>
+          </div>
         </div>
       </aside>
 
