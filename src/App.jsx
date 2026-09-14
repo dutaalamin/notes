@@ -295,11 +295,23 @@ export default function App() {
   const [imageUrlInput, setImageUrlInput] = useState('');
   const [uploadedImages, setUploadedImages] = useState([]);
 
-  // New Folder Form
   const [newFolderName, setNewFolderName] = useState('');
   const [activeNoteModal, setActiveNoteModal] = useState(null);
   const [isEditingText, setIsEditingText] = useState(false);
   const [editTextContent, setEditTextContent] = useState('');
+
+  // Realtime Broadcast Channel Ref
+  const broadcastChannelRef = useRef(null);
+
+  const sendBroadcast = (event, payload) => {
+    if (broadcastChannelRef.current) {
+      broadcastChannelRef.current.send({
+        type: 'broadcast',
+        event,
+        payload
+      }).catch(err => console.log('Broadcast err:', err));
+    }
+  };
 
   // Auth & User States (Default active profile Alysa - bypass login)
   const [currentUser, setCurrentUser] = useState({ id: 'demo-alysa', email: 'alysa@stoody.id', user_metadata: { full_name: 'Alysa' } });
@@ -648,11 +660,43 @@ export default function App() {
     }
   };
 
-  // Fetch initial notes & setup Supabase Realtime Subscriptions
+  // Fetch initial notes & setup Supabase Realtime Subscriptions + Instant Broadcast
   useEffect(() => {
     fetchData();
 
-    // Real-time listener for 'notes' table
+    // 1. Instant WebSocket Broadcast Channel (Sub-second / 0s P2P Sync)
+    const broadcastChannel = supabase.channel('stoody_live_broadcast');
+    broadcastChannelRef.current = broadcastChannel;
+
+    broadcastChannel
+      .on('broadcast', { event: 'INSERT_NOTE' }, ({ payload }) => {
+        if (payload && payload.id) {
+          setNotes((prev) => prev.some(n => n.id === payload.id) ? prev : [payload, ...prev]);
+        }
+      })
+      .on('broadcast', { event: 'DELETE_NOTE' }, ({ payload }) => {
+        if (payload && payload.id) {
+          setNotes((prev) => prev.filter(n => n.id !== payload.id));
+        }
+      })
+      .on('broadcast', { event: 'UPDATE_NOTE' }, ({ payload }) => {
+        if (payload && payload.id) {
+          setNotes((prev) => prev.map(n => n.id === payload.id ? payload : n));
+        }
+      })
+      .on('broadcast', { event: 'INSERT_FOLDER' }, ({ payload }) => {
+        if (payload && payload.id) {
+          setFolders((prev) => prev.some(f => f.id === payload.id) ? prev : [payload, ...prev]);
+        }
+      })
+      .on('broadcast', { event: 'DELETE_FOLDER' }, ({ payload }) => {
+        if (payload && payload.id) {
+          setFolders((prev) => prev.filter(f => f.id !== payload.id));
+        }
+      })
+      .subscribe();
+
+    // 2. Real-time Postgres listener for 'notes' table
     const notesChannel = supabase
       .channel('realtime_notes_live')
       .on(
@@ -683,7 +727,7 @@ export default function App() {
       )
       .subscribe();
 
-    // Real-time listener for 'folders' table
+    // 3. Real-time Postgres listener for 'folders' table
     const foldersChannel = supabase
       .channel('realtime_folders_live')
       .on(
@@ -702,12 +746,13 @@ export default function App() {
       )
       .subscribe();
 
-    // Polling backup every 2 seconds for ultra-fast 1-2s live sync
+    // 4. Polling backup every 2 seconds for guaranteed safety net
     const pollInterval = setInterval(() => {
       fetchData();
     }, 2000);
 
     return () => {
+      supabase.removeChannel(broadcastChannel);
       supabase.removeChannel(notesChannel);
       supabase.removeChannel(foldersChannel);
       clearInterval(pollInterval);
@@ -759,6 +804,7 @@ export default function App() {
     if (insertError) {
       console.error('Supabase insert error (addNote):', insertError);
     }
+    sendBroadcast('INSERT_NOTE', newNote);
     setNotes(prev => {
       const updated = [newNote, ...prev.filter(n => n.id !== newNote.id)];
       try {
@@ -786,6 +832,7 @@ export default function App() {
     };
 
     await supabase.from('folders').insert([newFolderObj]);
+    sendBroadcast('INSERT_FOLDER', newFolderObj);
     setFolders(prev => [newFolderObj, ...prev]);
     setNewFolderName('');
     setIsFolderModalOpen(false);
@@ -794,6 +841,7 @@ export default function App() {
   const handleDeleteNote = async (id) => {
     if (confirm('Delete this note?')) {
       await supabase.from('notes').delete().eq('id', id);
+      sendBroadcast('DELETE_NOTE', { id });
       setNotes(prev => {
         const updated = prev.filter(n => n.id !== id);
         try {
@@ -807,6 +855,7 @@ export default function App() {
   const handleDeleteFolder = async (id) => {
     if (confirm('Delete this folder?')) {
       await supabase.from('folders').delete().eq('id', id);
+      sendBroadcast('DELETE_FOLDER', { id });
       setFolders(folders.filter(f => f.id !== id));
       if (selectedFolder === folders.find(f => f.id === id)?.name) {
         setSelectedFolder(null);
@@ -1019,6 +1068,7 @@ export default function App() {
       if (insertError) {
         console.error('Supabase insert error:', insertError);
       }
+      sendBroadcast('INSERT_NOTE', newNote);
       setNotes(prev => {
         const updated = [newNote, ...prev.filter(n => n.id !== newNote.id)];
         try {
