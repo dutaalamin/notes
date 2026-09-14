@@ -145,9 +145,31 @@ export default function App() {
     fetchFromSupabase();
   }, []);
 
+  const saveWalletsToSupabase = async (newWallets) => {
+    try {
+      await supabase.from('user_wallets').upsert([{
+        id: 'duta',
+        mandiri: Number(newWallets.mandiri || 0),
+        gopay: Number(newWallets.gopay || 0),
+        cash: Number(newWallets.cash || 0)
+      }]);
+    } catch (e) {
+      console.log('Wallet cloud sync error:', e);
+    }
+  };
+
   const fetchFromSupabase = async () => {
     try {
       setIsSyncing(true);
+      const { data: wData } = await supabase.from('user_wallets').select('*').eq('id', 'duta').maybeSingle();
+      if (wData) {
+        setWallets({
+          mandiri: Number(wData.mandiri || 0),
+          gopay: Number(wData.gopay || 0),
+          cash: Number(wData.cash || 0)
+        });
+      }
+
       const { data: eData } = await supabase.from('daily_expenses').select('*').order('created_at', { ascending: false });
       if (eData) setExpenseList(eData);
 
@@ -223,11 +245,13 @@ export default function App() {
 
   // Handlers Wallet & Expenses
   const handleSaveBalance = () => {
-    setWallets({
+    const newW = {
       mandiri: tempWalletInputs.mandiri !== '' ? parseInt(tempWalletInputs.mandiri, 10) || 0 : wallets.mandiri,
       gopay: tempWalletInputs.gopay !== '' ? parseInt(tempWalletInputs.gopay, 10) || 0 : wallets.gopay,
       cash: tempWalletInputs.cash !== '' ? parseInt(tempWalletInputs.cash, 10) || 0 : wallets.cash
-    });
+    };
+    setWallets(newW);
+    saveWalletsToSupabase(newW);
     setIsEditingBalance(false);
   };
 
@@ -239,10 +263,12 @@ export default function App() {
     const dateFormatted = formatDisplayDate(expDate);
     const method = expPaymentMethod || 'mandiri';
 
-    setWallets(prev => ({
-      ...prev,
-      [method]: Math.max(0, (prev[method] || 0) - amt)
-    }));
+    const newW = {
+      ...wallets,
+      [method]: Math.max(0, (wallets[method] || 0) - amt)
+    };
+    setWallets(newW);
+    saveWalletsToSupabase(newW);
 
     const newItem = { 
       id, 
@@ -272,10 +298,12 @@ export default function App() {
     const exp = expenseList.find(e => e.id === id);
     if (exp) {
       const method = exp.paymentMethod || exp.payment_method || 'mandiri';
-      setWallets(prev => ({
-        ...prev,
-        [method]: (prev[method] || 0) + Number(exp.amount)
-      }));
+      const newW = {
+        ...wallets,
+        [method]: (wallets[method] || 0) + Number(exp.amount)
+      };
+      setWallets(newW);
+      saveWalletsToSupabase(newW);
     }
     setExpenseList(expenseList.filter(e => e.id !== id));
     try { await supabase.from('daily_expenses').delete().eq('id', id); } catch (e) {}
