@@ -625,33 +625,38 @@ export default function App() {
     try {
       setIsSyncing(true);
 
-      // Remove auto-created 'General' folder & reset notes course if 'General'
-      await supabase.from('folders').delete().eq('name', 'General');
-      await supabase.from('notes').update({ course: '' }).eq('course', 'General');
-
       const { data: notesData, error: notesError } = await supabase.from('notes').select('*').order('created_at', { ascending: false });
       if (!notesError && notesData) {
         setNotes(prev => {
           const serverIds = new Set(notesData.map(n => n.id));
           const localOnly = prev.filter(n => !serverIds.has(n.id));
           const merged = [...localOnly, ...notesData];
-          try {
-            localStorage.setItem('alysa_notes_cache', JSON.stringify(merged));
-          } catch (e) {
-            console.log('Cache save err:', e);
+
+          // Change-detection: if notes haven't changed, return SAME reference to avoid re-render & memory leak
+          if (prev.length === merged.length && prev.every((n, idx) => n.id === merged[idx]?.id && n.content === merged[idx]?.content && n.title === merged[idx]?.title)) {
+            return prev;
           }
+
+          try {
+            // Cache lightweight metadata only to protect browser memory limit
+            const cacheSafe = merged.map(n => ({ ...n, images: (n.images && n.images[0]?.startsWith('http')) ? n.images : [] }));
+            localStorage.setItem('alysa_notes_cache', JSON.stringify(cacheSafe));
+          } catch (e) {}
           return merged;
         });
       }
       
       const { data: foldersData, error: foldersError } = await supabase.from('folders').select('*').order('created_at', { ascending: false });
       if (!foldersError && foldersData) {
-        setFolders(foldersData);
-        try {
-          localStorage.setItem('alysa_folders_cache', JSON.stringify(foldersData));
-        } catch (e) {
-          console.log('Cache save err:', e);
-        }
+        setFolders(prev => {
+          if (prev.length === foldersData.length && prev.every((f, idx) => f.id === foldersData[idx]?.id && f.name === foldersData[idx]?.name)) {
+            return prev;
+          }
+          try {
+            localStorage.setItem('alysa_folders_cache', JSON.stringify(foldersData));
+          } catch (e) {}
+          return foldersData;
+        });
       }
     } catch (err) {
       console.log('Supabase sync info:', err);
@@ -746,10 +751,10 @@ export default function App() {
       )
       .subscribe();
 
-    // 4. Polling backup every 2 seconds for guaranteed safety net
+    // 4. Polling backup every 5 seconds with zero-memory change detection
     const pollInterval = setInterval(() => {
       fetchData();
-    }, 2000);
+    }, 5000);
 
     return () => {
       supabase.removeChannel(broadcastChannel);
