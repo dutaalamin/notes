@@ -661,12 +661,22 @@ export default function App() {
           if (payload.eventType === 'INSERT') {
             setNotes((prev) => {
               if (prev.some(n => n.id === payload.new.id)) return prev;
-              return [payload.new, ...prev];
+              const updated = [payload.new, ...prev];
+              try { localStorage.setItem('alysa_notes_cache', JSON.stringify(updated)); } catch (e) {}
+              return updated;
             });
           } else if (payload.eventType === 'DELETE') {
-            setNotes((prev) => prev.filter(n => n.id !== payload.old.id));
+            setNotes((prev) => {
+              const updated = prev.filter(n => n.id !== payload.old.id);
+              try { localStorage.setItem('alysa_notes_cache', JSON.stringify(updated)); } catch (e) {}
+              return updated;
+            });
           } else if (payload.eventType === 'UPDATE') {
-            setNotes((prev) => prev.map(n => n.id === payload.new.id ? payload.new : n));
+            setNotes((prev) => {
+              const updated = prev.map(n => n.id === payload.new.id ? payload.new : n);
+              try { localStorage.setItem('alysa_notes_cache', JSON.stringify(updated)); } catch (e) {}
+              return updated;
+            });
           }
         }
       )
