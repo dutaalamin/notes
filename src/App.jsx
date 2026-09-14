@@ -79,12 +79,21 @@ export default function App() {
   };
 
   // --- TAB 1: SALDO & PENGELUARAN ---
-  const [currentBalance, setCurrentBalance] = useState(() => {
-    const saved = localStorage.getItem('my_current_balance');
-    return saved !== null ? parseInt(saved, 10) : 0;
+  const [wallets, setWallets] = useState(() => {
+    const saved = localStorage.getItem('my_wallets_data');
+    if (saved) {
+      try { return JSON.parse(saved); } catch {}
+    }
+    const oldBal = localStorage.getItem('my_current_balance');
+    return {
+      mandiri: oldBal !== null ? parseInt(oldBal, 10) : 0,
+      gopay: 0,
+      cash: 0
+    };
   });
+
+  const [tempWalletInputs, setTempWalletInputs] = useState({ mandiri: '', gopay: '', cash: '' });
   const [isEditingBalance, setIsEditingBalance] = useState(false);
-  const [tempBalanceInput, setTempBalanceInput] = useState('');
 
   const [expenseList, setExpenseList] = useState(() => {
     const saved = localStorage.getItem('my_expenses_data');
@@ -99,6 +108,7 @@ export default function App() {
 
   const [expDate, setExpDate] = useState(getTodayDateISO());
   const [expCategory, setExpCategory] = useState('Makanan');
+  const [expPaymentMethod, setExpPaymentMethod] = useState('mandiri'); // 'mandiri' | 'gopay' | 'cash'
   const [expTitle, setExpTitle] = useState('');
   const [expAmount, setExpAmount] = useState('');
 
@@ -119,8 +129,8 @@ export default function App() {
 
   // Backup LocalStorage
   useEffect(() => {
-    localStorage.setItem('my_current_balance', currentBalance.toString());
-  }, [currentBalance]);
+    localStorage.setItem('my_wallets_data', JSON.stringify(wallets));
+  }, [wallets]);
 
   useEffect(() => {
     localStorage.setItem('my_expenses_data', JSON.stringify(expenseList));
@@ -153,6 +163,7 @@ export default function App() {
     }
   };
 
+  const totalBalance = Number(wallets.mandiri || 0) + Number(wallets.gopay || 0) + Number(wallets.cash || 0);
   const totalExpenseAmount = expenseList.reduce((s, i) => s + Number(i.amount), 0);
   const formatIDR = (num) => 'Rp ' + new Intl.NumberFormat('id-ID').format(num);
 
@@ -161,6 +172,12 @@ export default function App() {
     const parts = isoString.split('-');
     if (parts.length !== 3) return isoString;
     return new Date(parts[0], parts[1] - 1, parts[2]).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+  };
+
+  const paymentMethodsMeta = {
+    mandiri: { name: 'Bank Mandiri', icon: '🏦' },
+    gopay: { name: 'GoPay', icon: '📱' },
+    cash: { name: 'Cash', icon: '💵' }
   };
 
   const categoryIcons = {
@@ -206,8 +223,11 @@ export default function App() {
 
   // Handlers Wallet & Expenses
   const handleSaveBalance = () => {
-    if (!tempBalanceInput) { setIsEditingBalance(false); return; }
-    setCurrentBalance(parseInt(tempBalanceInput, 10));
+    setWallets({
+      mandiri: tempWalletInputs.mandiri !== '' ? parseInt(tempWalletInputs.mandiri, 10) || 0 : wallets.mandiri,
+      gopay: tempWalletInputs.gopay !== '' ? parseInt(tempWalletInputs.gopay, 10) || 0 : wallets.gopay,
+      cash: tempWalletInputs.cash !== '' ? parseInt(tempWalletInputs.cash, 10) || 0 : wallets.cash
+    });
     setIsEditingBalance(false);
   };
 
@@ -217,19 +237,46 @@ export default function App() {
     const id = Date.now().toString();
     const amt = parseInt(expAmount, 10);
     const dateFormatted = formatDisplayDate(expDate);
+    const method = expPaymentMethod || 'mandiri';
 
-    setCurrentBalance(prev => Math.max(0, prev - amt));
-    const newItem = { id, date: dateFormatted, category: expCategory, title: expTitle, amount: amt };
+    setWallets(prev => ({
+      ...prev,
+      [method]: Math.max(0, (prev[method] || 0) - amt)
+    }));
+
+    const newItem = { 
+      id, 
+      date: dateFormatted, 
+      category: expCategory, 
+      title: expTitle, 
+      amount: amt,
+      paymentMethod: method 
+    };
     setExpenseList([newItem, ...expenseList]);
     setExpTitle('');
     setExpAmount('');
 
-    try { await supabase.from('daily_expenses').insert([{ id, date: dateFormatted, category: expCategory, title: expTitle, amount: amt }]); } catch (e) {}
+    try { 
+      await supabase.from('daily_expenses').insert([{ 
+        id, 
+        date: dateFormatted, 
+        category: expCategory, 
+        title: expTitle, 
+        amount: amt,
+        payment_method: method 
+      }]); 
+    } catch (e) {}
   };
 
   const handleDeleteExpense = async (id) => {
     const exp = expenseList.find(e => e.id === id);
-    if (exp) setCurrentBalance(prev => prev + Number(exp.amount));
+    if (exp) {
+      const method = exp.paymentMethod || exp.payment_method || 'mandiri';
+      setWallets(prev => ({
+        ...prev,
+        [method]: (prev[method] || 0) + Number(exp.amount)
+      }));
+    }
     setExpenseList(expenseList.filter(e => e.id !== id));
     try { await supabase.from('daily_expenses').delete().eq('id', id); } catch (e) {}
   };
@@ -364,44 +411,91 @@ export default function App() {
               className="space-y-6"
             >
               {/* Wallet Saldo Card */}
-              <div className="bg-[#FFF9E6] p-6 sm:p-7 rounded-3xl border border-[#FFE082] shadow-sm space-y-6">
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-[#FFE082]/70 pb-5">
+              <div className="bg-[#FFF9E6] p-5 sm:p-7 rounded-3xl border border-[#FFE082] shadow-sm space-y-5">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-[#FFE082]/70 pb-4">
                   <div>
-                    <span className="text-[11px] text-[#D97706] font-extrabold uppercase tracking-wider block mb-1">
-                      💳 SALDO DUTA SEKARANG
+                    <span className="text-[11px] text-[#D97706] font-extrabold uppercase tracking-wider block mb-0.5">
+                      💳 TOTAL SALDO DUTA SEKARANG
                     </span>
-                    
-                    {isEditingBalance ? (
-                      <div className="flex items-center gap-2 mt-1">
-                        <input 
-                          type="number" 
-                          placeholder="Set Saldo Baru"
-                          value={tempBalanceInput}
-                          onChange={(e) => setTempBalanceInput(e.target.value)}
-                          className="bg-white border border-[#FFE082] rounded-xl px-3.5 py-1.5 text-sm text-[#2A2B2E] focus:outline-none font-medium"
-                        />
-                        <button 
-                          onClick={handleSaveBalance}
-                          className="px-4 py-1.5 bg-[#FFCB05] hover:bg-[#E5B700] text-[#2A2B2E] font-extrabold text-xs rounded-xl cursor-pointer shadow-xs transition-all"
-                        >
-                          Simpan
-                        </button>
-                      </div>
-                    ) : (
-                      <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-[#2A2B2E]">{formatIDR(currentBalance)}</h1>
-                    )}
+                    <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-[#2A2B2E]">{formatIDR(totalBalance)}</h1>
                   </div>
 
                   <button 
                     onClick={() => {
-                      setTempBalanceInput(currentBalance.toString());
+                      setTempWalletInputs({
+                        mandiri: (wallets.mandiri || 0).toString(),
+                        gopay: (wallets.gopay || 0).toString(),
+                        cash: (wallets.cash || 0).toString()
+                      });
                       setIsEditingBalance(!isEditingBalance);
                     }}
                     className="px-4 py-2 bg-white text-[#2A2B2E] border border-[#FFE082] rounded-2xl text-xs font-extrabold cursor-pointer transition-all shadow-xs"
                   >
-                    {isEditingBalance ? 'Batal' : 'Edit Saldo'}
+                    {isEditingBalance ? 'Batal' : 'Edit Saldo Akun'}
                   </button>
                 </div>
+
+                {/* Multi-Account Balance Cards / Edit Form */}
+                {isEditingBalance ? (
+                  <div className="bg-white p-4 rounded-2xl border border-[#FFE082] space-y-3">
+                    <h3 className="text-xs font-extrabold text-[#8C6D1F] uppercase tracking-wider">Set Saldo Masing-Masing Akun</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div>
+                        <label className="text-[11px] font-bold text-[#2A2B2E] block mb-1">🏦 Bank Mandiri</label>
+                        <input 
+                          type="number"
+                          value={tempWalletInputs.mandiri}
+                          onChange={(e) => setTempWalletInputs({ ...tempWalletInputs, mandiri: e.target.value })}
+                          className="w-full bg-[#FFFDF5] border border-[#FFE082] rounded-xl px-3 py-2 text-xs font-bold text-[#2A2B2E]"
+                          placeholder="Saldo Mandiri (Rp)"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[11px] font-bold text-[#2A2B2E] block mb-1">📱 GoPay</label>
+                        <input 
+                          type="number"
+                          value={tempWalletInputs.gopay}
+                          onChange={(e) => setTempWalletInputs({ ...tempWalletInputs, gopay: e.target.value })}
+                          className="w-full bg-[#FFFDF5] border border-[#FFE082] rounded-xl px-3 py-2 text-xs font-bold text-[#2A2B2E]"
+                          placeholder="Saldo GoPay (Rp)"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[11px] font-bold text-[#2A2B2E] block mb-1">💵 Cash</label>
+                        <input 
+                          type="number"
+                          value={tempWalletInputs.cash}
+                          onChange={(e) => setTempWalletInputs({ ...tempWalletInputs, cash: e.target.value })}
+                          className="w-full bg-[#FFFDF5] border border-[#FFE082] rounded-xl px-3 py-2 text-xs font-bold text-[#2A2B2E]"
+                          placeholder="Saldo Cash (Rp)"
+                        />
+                      </div>
+                    </div>
+                    <div className="flex justify-end pt-1">
+                      <button 
+                        onClick={handleSaveBalance}
+                        className="px-5 py-2 bg-[#FFCB05] hover:bg-[#E5B700] text-[#2A2B2E] font-extrabold text-xs rounded-xl cursor-pointer shadow-xs transition-all"
+                      >
+                        Simpan Semua Saldo
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="bg-white p-3.5 rounded-2xl border border-[#FFE082] shadow-xs">
+                      <span className="text-[11px] text-[#8C6D1F] font-extrabold block">🏦 Bank Mandiri</span>
+                      <span className="text-base font-black text-[#2A2B2E] block mt-0.5">{formatIDR(wallets.mandiri || 0)}</span>
+                    </div>
+                    <div className="bg-white p-3.5 rounded-2xl border border-[#FFE082] shadow-xs">
+                      <span className="text-[11px] text-[#8C6D1F] font-extrabold block">📱 GoPay</span>
+                      <span className="text-base font-black text-[#2A2B2E] block mt-0.5">{formatIDR(wallets.gopay || 0)}</span>
+                    </div>
+                    <div className="bg-white p-3.5 rounded-2xl border border-[#FFE082] shadow-xs">
+                      <span className="text-[11px] text-[#8C6D1F] font-extrabold block">💵 Cash</span>
+                      <span className="text-base font-black text-[#2A2B2E] block mt-0.5">{formatIDR(wallets.cash || 0)}</span>
+                    </div>
+                  </div>
+                )}
 
                 {/* Progress Bar Only Expense Breakdown */}
                 {expenseDistribution.length > 0 && (
@@ -444,7 +538,7 @@ export default function App() {
                 </h2>
                 
                 <form onSubmit={handleAddExpense} className="space-y-3">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <input 
                       type="date" 
                       value={expDate}
@@ -465,6 +559,16 @@ export default function App() {
                       <option value="Olahraga">🏃 Olahraga</option>
                       <option value="Belanja">🛒 Belanja</option>
                       <option value="Lainnya">📝 Lainnya</option>
+                    </select>
+
+                    <select 
+                      value={expPaymentMethod}
+                      onChange={(e) => setExpPaymentMethod(e.target.value)}
+                      className="bg-white border border-[#FFE082] rounded-2xl px-4 py-2.5 text-xs text-[#2A2B2E] focus:outline-none font-bold"
+                    >
+                      <option value="mandiri">🏦 Bank Mandiri</option>
+                      <option value="gopay">📱 GoPay</option>
+                      <option value="cash">💵 Cash</option>
                     </select>
                   </div>
 
@@ -513,10 +617,13 @@ export default function App() {
                             {categoryIcons[item.category] || '📝'}
                           </span>
                           <div>
-                            <div className="flex items-center gap-2">
+                            <div className="flex flex-wrap items-center gap-1.5">
                               <span className="text-xs font-extrabold text-[#2A2B2E]">{item.title}</span>
                               <span className="text-[10px] font-bold text-[#B45309] bg-[#FFE57F] px-2 py-0.5 rounded-full border border-[#FFE082]">
                                 {item.category || 'Lainnya'}
+                              </span>
+                              <span className="text-[10px] font-extrabold text-[#2A2B2E] bg-white px-2 py-0.5 rounded-full border border-[#FFE082]">
+                                {paymentMethodsMeta[item.paymentMethod || item.payment_method || 'mandiri']?.icon} {paymentMethodsMeta[item.paymentMethod || item.payment_method || 'mandiri']?.name}
                               </span>
                             </div>
                             <span className="text-[10px] text-[#8C6D1F] block mt-0.5">{item.date}</span>
