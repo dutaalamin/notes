@@ -2252,29 +2252,14 @@ export default function App() {
 
                         <div className="flex items-center gap-2 flex-wrap">
                           {downloadUrl ? (
-                            <>
-                              <button
-                                onClick={() => handleRealAIScan(activeNoteModal)}
-                                disabled={scanningId === activeNoteModal.id}
-                                className="bg-[#C89B68] hover:bg-[#B88B58] text-white text-xs font-extrabold py-2 px-3.5 rounded-xl shadow-sm flex items-center gap-1.5 transition-all active:scale-95 disabled:opacity-50"
-                              >
-                                <Sparkles size={14} className={scanningId === activeNoteModal.id ? 'animate-spin' : ''} />
-                                <span>
-                                  {scanningId === activeNoteModal.id
-                                    ? (scanStatus[activeNoteModal.id] || 'Analyzing document...')
-                                    : 'AI Text OCR'}
-                                </span>
-                              </button>
-
-                              <a
-                                href={downloadUrl}
-                                download={activeNoteModal.title}
-                                className="bg-white hover:bg-[#F7EFE5] border border-[#E8DAC8] text-[#8C5E32] text-xs font-extrabold py-2 px-3.5 rounded-xl shadow-xs flex items-center gap-1.5 active:scale-95"
-                              >
-                                <Download size={14} className="text-[#C89B68]" />
-                                <span>Download Original File</span>
-                              </a>
-                            </>
+                            <a
+                              href={downloadUrl}
+                              download={activeNoteModal.title}
+                              className="bg-white hover:bg-[#F7EFE5] border border-[#E8DAC8] text-[#8C5E32] text-xs font-extrabold py-2 px-3.5 rounded-xl shadow-xs flex items-center gap-1.5 active:scale-95"
+                            >
+                              <Download size={14} className="text-[#C89B68]" />
+                              <span>Download File</span>
+                            </a>
                           ) : (
                             <button
                               onClick={() => handleAttachFileToNote(activeNoteModal)}
