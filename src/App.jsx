@@ -852,11 +852,30 @@ export default function App() {
     };
   }, [userNotes]);
 
+  const getNoteImages = (note) => {
+    if (!note) return [];
+    const list = [];
+    if (Array.isArray(note.images) && note.images.length > 0) {
+      note.images.forEach(img => {
+        if (img && typeof img === 'string' && img.trim()) list.push(img.trim());
+      });
+    }
+    if (note.content && typeof note.content === 'string') {
+      const matches = note.content.matchAll(/(?:🖼️ IMAGE_URL:|📥 DOWNLOAD_URL:)\s*(data:image\/[^\s]+|https?:\/\/[^\s]+)/gi);
+      for (const m of matches) {
+        if (m[1] && !list.includes(m[1].trim())) {
+          list.push(m[1].trim());
+        }
+      }
+    }
+    return list;
+  };
+
   // Filter notes
   const filteredNotes = userNotes.filter(n => {
     const matchesNav = 
       activeNav === 'All Files' ? true :
-      activeNav === 'Photos / Slides' ? (n.images && n.images.length > 0) :
+      activeNav === 'Photos / Slides' ? (getNoteImages(n).length > 0) :
       activeNav === 'AI Scan' ? n.ocrExtracted : true;
 
     const matchesFolder = selectedFolder ? n.course === selectedFolder : true;
@@ -953,13 +972,13 @@ export default function App() {
 
       if (isImg) {
         if (filePublicUrl) {
-          // Use the permanent storage URL
           imageArray = [filePublicUrl];
+          contentText += `\n\n🖼️ IMAGE_URL: ${filePublicUrl}`;
         } else {
-          // Fallback: compress to Data URL
-          const dataUrl = await compressImageAsDataURL(file);
+          const dataUrl = await compressImageAsDataURL(file, 550, 550, 0.45);
           if (dataUrl) {
             imageArray = [dataUrl];
+            contentText += `\n\n🖼️ IMAGE_URL: ${dataUrl}`;
           }
         }
       } else {
@@ -1020,9 +1039,10 @@ export default function App() {
       let extractedCombined = '';
 
       // 1. Process attached images via Tesseract OCR
-      if (note.images && note.images.length > 0) {
-        for (let i = 0; i < note.images.length; i++) {
-          const imgUrl = note.images[i];
+      const ocrImages = getNoteImages(note);
+      if (ocrImages.length > 0) {
+        for (let i = 0; i < ocrImages.length; i++) {
+          const imgUrl = ocrImages[i];
           const text = await extractTextFromFile(imgUrl, `${note.title || 'image'}.jpg`, (msg) => {
             setScanStatus(prev => ({ ...prev, [noteId]: msg }));
           });
@@ -1873,45 +1893,49 @@ export default function App() {
                             })()}
 
                             {/* Photo Preview if exists */}
-                            {note.images && note.images.length > 0 && (
-                              <div className="mb-3">
-                                {note.images.map((img, i) => (
-                                  <div
-                                    key={i}
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setPreviewImage(img);
-                                    }}
-                                    className={`relative h-36 rounded-xl overflow-hidden cursor-pointer border ${t.border} group/img`}
-                                  >
-                                    <img
-                                      src={img}
-                                      alt="Note Photo"
-                                      loading="eager"
-                                      decoding="async"
-                                      className="w-full h-full object-cover group-hover/img:scale-105 transition-transform duration-300 bg-gray-100"
-                                    />
-                                    <div className="absolute inset-0 bg-black/20 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-between p-2 text-white">
-                                      <span className="flex items-center gap-1 text-xs font-bold bg-black/40 px-2 py-1 rounded-lg backdrop-blur-xs">
-                                        <ImageIcon size={14} />
-                                        <span>View</span>
-                                      </span>
-                                      <button
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleDownloadFile(img, `${note.title || 'image'}.jpg`);
-                                        }}
-                                        className={`${t.bgAccent} text-white p-1.5 rounded-lg shadow-md flex items-center gap-1 text-[10px] font-bold active:scale-95`}
-                                        title="Download Image"
-                                      >
-                                        <Download size={13} />
-                                        <span>Download</span>
-                                      </button>
+                            {(() => {
+                              const cardImages = getNoteImages(note);
+                              if (cardImages.length === 0) return null;
+                              return (
+                                <div className="mb-3">
+                                  {cardImages.map((img, i) => (
+                                    <div
+                                      key={i}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setPreviewImage(img);
+                                      }}
+                                      className={`relative h-36 rounded-xl overflow-hidden cursor-pointer border ${t.border} group/img`}
+                                    >
+                                      <img
+                                        src={img}
+                                        alt="Note Photo"
+                                        loading="eager"
+                                        decoding="async"
+                                        className="w-full h-full object-cover group-hover/img:scale-105 transition-transform duration-300 bg-gray-100"
+                                      />
+                                      <div className="absolute inset-0 bg-black/20 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-between p-2 text-white">
+                                        <span className="flex items-center gap-1 text-xs font-bold bg-black/40 px-2 py-1 rounded-lg backdrop-blur-xs">
+                                          <ImageIcon size={14} />
+                                          <span>View</span>
+                                        </span>
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleDownloadFile(img, `${note.title || 'image'}.jpg`);
+                                          }}
+                                          className={`${t.bgAccent} text-white p-1.5 rounded-lg shadow-md flex items-center gap-1 text-[10px] font-bold active:scale-95`}
+                                          title="Download Image"
+                                        >
+                                          <Download size={13} />
+                                          <span>Download</span>
+                                        </button>
+                                      </div>
                                     </div>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
+                                  ))}
+                                </div>
+                              );
+                            })()}
 
                             {/* Text Preview (extended line-clamp and cleaner font) */}
                             <p className={`text-xs ${t.textMuted} whitespace-pre-line leading-relaxed line-clamp-6 font-medium`}>
@@ -2121,41 +2145,45 @@ export default function App() {
             {/* Scrollable Content Body */}
             <div className="flex-1 overflow-y-auto space-y-4 pr-1">
               {/* Attached Images */}
-              {activeNoteModal.images && activeNoteModal.images.length > 0 && (
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-[#8A7977]">Attached Photos ({activeNoteModal.images.length})</span>
-                    <button
-                      onClick={() => handleRealAIScan(activeNoteModal)}
-                      disabled={scanningId === activeNoteModal.id}
-                      className="bg-[#F3E5D8] hover:bg-[#E8D4C1] text-[#8C5E32] text-xs font-extrabold px-3 py-1.5 rounded-xl flex items-center gap-1.5 shadow-xs transition-all active:scale-95 disabled:opacity-50"
-                    >
-                      <Sparkles size={14} className={scanningId === activeNoteModal.id ? 'animate-spin' : ''} />
-                      <span>
-                        {scanningId === activeNoteModal.id
-                          ? (scanStatus[activeNoteModal.id] || 'Scanning...')
-                          : 'Extract Text with AI (Free)'}
-                      </span>
-                    </button>
-                  </div>
-                  {activeNoteModal.images.map((img, idx) => (
-                    <div key={idx} className="relative rounded-2xl overflow-hidden border border-[#E8DAC8] bg-[#F7EFE5]">
-                      <img
-                        src={img}
-                        alt="Note Attachment"
-                        className="w-full h-auto max-h-[400px] object-contain mx-auto"
-                      />
+              {(() => {
+                const modalImages = getNoteImages(activeNoteModal);
+                if (modalImages.length === 0) return null;
+                return (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-[#8A7977]">Attached Photos ({modalImages.length})</span>
                       <button
-                        onClick={() => handleDownloadFile(img, `${activeNoteModal.title}_image_${idx + 1}.jpg`)}
-                        className="absolute bottom-3 right-3 bg-[#C89B68] hover:bg-[#B88B58] text-white text-xs font-bold py-2 px-3.5 rounded-xl shadow-md flex items-center gap-1.5 transition-all active:scale-95"
+                        onClick={() => handleRealAIScan(activeNoteModal)}
+                        disabled={scanningId === activeNoteModal.id}
+                        className="bg-[#F3E5D8] hover:bg-[#E8D4C1] text-[#8C5E32] text-xs font-extrabold px-3 py-1.5 rounded-xl flex items-center gap-1.5 shadow-xs transition-all active:scale-95 disabled:opacity-50"
                       >
-                        <Download size={14} />
-                        <span>Download Image</span>
+                        <Sparkles size={14} className={scanningId === activeNoteModal.id ? 'animate-spin' : ''} />
+                        <span>
+                          {scanningId === activeNoteModal.id
+                            ? (scanStatus[activeNoteModal.id] || 'Scanning...')
+                            : 'Extract Text with AI (Free)'}
+                        </span>
                       </button>
                     </div>
-                  ))}
-                </div>
-              )}
+                    {modalImages.map((img, idx) => (
+                      <div key={idx} className="relative rounded-2xl overflow-hidden border border-[#E8DAC8] bg-[#F7EFE5]">
+                        <img
+                          src={img}
+                          alt="Note Attachment"
+                          className="w-full h-auto max-h-[400px] object-contain mx-auto"
+                        />
+                        <button
+                          onClick={() => handleDownloadFile(img, `${activeNoteModal.title}_image_${idx + 1}.jpg`)}
+                          className="absolute bottom-3 right-3 bg-[#C89B68] hover:bg-[#B88B58] text-white text-xs font-bold py-2 px-3.5 rounded-xl shadow-md flex items-center gap-1.5 transition-all active:scale-95"
+                        >
+                          <Download size={14} />
+                          <span>Download Image</span>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
 
               {/* PDF & Document Live Preview and AI Text Extractor Bar */}
               {(() => {
