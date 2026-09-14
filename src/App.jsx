@@ -391,7 +391,8 @@ export default function App() {
   const formatCleanNoteContent = (content) => {
     if (!content) return '';
     return content
-      .replace(/\n\n📥 DOWNLOAD_URL: .+/g, '')
+      .replace(/(?:🖼️\s*|📥\s*)?(?:IMAGE_URL|DOWNLOAD_URL):\s*(?:data:[^\s]+|https?:\/\/[^\s]+)?/gi, '')
+      .replace(/data:image\/[a-zA-Z0-9+=\/;,]+/gi, '')
       .replace(/--- 📑 Extracted Document Text \([^)]+\) ---\n?/gi, '')
       .replace(/--- 📑 Extracted Document Text ---\n?/gi, '')
       .replace(/--- 📑 Hasil Ekstraksi Teks \([^)]+\) ---\n?/gi, '')
@@ -401,7 +402,7 @@ export default function App() {
       .replace(/--- 📄 Hasil Scan AI \([^)]+\) ---\n?/gi, '')
       .replace(/--- 📄 Hasil Scan AI ---\n?/gi, '')
       .replace(/--- 🖼️ Slide \d+ ---\n?/gi, '')
-      .replace(/^\[(PDF File|Photo \/ Image Note|Document File|PowerPoint Presentation|Excel Spreadsheet|DOCX File|TXT File)\] .+\n?/gi, '')
+      .replace(/^\[(PDF File|Photo \/ Image Note|Document File|PowerPoint Presentation|Excel Spreadsheet|DOCX File|TXT File)\] .*\n?/gi, '')
       .replace(/<\/?[a-z0-9:]+[^>]*>/gi, '') // Strip remaining XML tags like <a:pPr>, <p:txBody>
       .trim();
   };
@@ -1028,12 +1029,12 @@ export default function App() {
       if (isImg) {
         if (filePublicUrl) {
           imageArray = [filePublicUrl];
-          contentText += `\n\n🖼️ IMAGE_URL: ${filePublicUrl}`;
+          contentText = `🖼️ IMAGE_URL: ${filePublicUrl}`;
         } else {
           const dataUrl = await compressImageAsDataURL(file, 550, 550, 0.45);
           if (dataUrl) {
             imageArray = [dataUrl];
-            contentText += `\n\n🖼️ IMAGE_URL: ${dataUrl}`;
+            contentText = `🖼️ IMAGE_URL: ${dataUrl}`;
           }
         }
       } else {
@@ -1043,15 +1044,6 @@ export default function App() {
         }
         if (filePublicUrl) {
           contentText = `[${fileTypeLabel}] ${file.name}\n\n📥 DOWNLOAD_URL: ${filePublicUrl}`;
-        }
-        // Auto extract text content from document upon upload
-        try {
-          const autoExtracted = await extractTextFromFile(file, file.name);
-          if (autoExtracted && !autoExtracted.startsWith('(')) {
-            contentText += `\n\n` + autoExtracted;
-          }
-        } catch (autoErr) {
-          console.log('Auto document extraction notice:', autoErr);
         }
       }
 
@@ -1155,9 +1147,14 @@ export default function App() {
       }
 
       const fileHeader = note.content?.split('\n\n')?.[0] || `[Document File] ${note.title}`;
-      const updatedContent = downloadUrl
-        ? `${fileHeader}\n\n📥 DOWNLOAD_URL: ${downloadUrl}\n\n${extractedCombined}`
-        : extractedCombined;
+      const imageUrlMatch = note.content?.match?.(/🖼️ IMAGE_URL: (.+)/);
+
+      let updatedContent = extractedCombined;
+      if (imageUrlMatch) {
+        updatedContent = `🖼️ IMAGE_URL: ${imageUrlMatch[1].trim()}\n\n--- 📄 Hasil Scan AI ---\n${extractedCombined}`;
+      } else if (downloadUrl) {
+        updatedContent = `${fileHeader}\n\n📥 DOWNLOAD_URL: ${downloadUrl}\n\n--- 📄 Hasil Scan AI ---\n${extractedCombined}`;
+      }
 
       // Update Supabase Database
       try {
@@ -1969,10 +1966,12 @@ export default function App() {
                               );
                             })()}
 
-                            {/* Text Preview (extended line-clamp and cleaner font) */}
-                            <p className={`text-xs ${t.textMuted} whitespace-pre-line leading-relaxed line-clamp-6 font-medium`}>
-                              {formatCleanNoteContent(note.content)}
-                            </p>
+                            {/* Text Preview (Only visible when clean text exists e.g. after AI Scan) */}
+                            {formatCleanNoteContent(note.content) ? (
+                              <p className={`text-xs ${t.textMuted} whitespace-pre-line leading-relaxed line-clamp-6 font-medium mt-2 bg-white/40 p-2.5 rounded-xl border border-black/5`}>
+                                {formatCleanNoteContent(note.content)}
+                              </p>
+                            ) : null}
                           </div>
 
                           {/* Footer Card */}
