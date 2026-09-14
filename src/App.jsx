@@ -322,20 +322,20 @@ export default function App() {
       <main className="max-w-3xl mx-auto px-5 py-8 space-y-6">
 
         {/* Clean Header Navigation */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pb-2">
-          <div>
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pb-2">
+          <div className="text-center sm:text-left">
             <h1 className="font-black text-base tracking-widest uppercase text-[#2A2B2E] font-['Plus_Jakarta_Sans',sans-serif]">
               NOTES DUTA
             </h1>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="w-full sm:w-auto">
             {/* Segmented Control Navigation Tabs (Saldo & Pengeluaran, Olahraga, Saving) */}
-            <div className="bg-[#FFF3CD] p-1 rounded-2xl border border-[#FFE082] flex gap-1 shadow-inner">
+            <div className="bg-[#FFF3CD] p-1 rounded-2xl border border-[#FFE082] flex w-full sm:w-auto justify-between gap-1 shadow-inner overflow-x-auto">
               <button
                 type="button"
                 onClick={() => setActiveTab('wallet')}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
+                className={`flex-1 sm:flex-initial px-2.5 sm:px-3.5 py-2 rounded-xl text-[11px] sm:text-xs font-extrabold transition-all cursor-pointer whitespace-nowrap text-center ${
                   activeTab === 'wallet' ? 'bg-[#FFCB05] text-[#2A2B2E] shadow-xs' : 'text-[#8C6D1F] hover:text-[#2A2B2E]'
                 }`}
               >
@@ -345,7 +345,7 @@ export default function App() {
               <button
                 type="button"
                 onClick={() => setActiveTab('sports')}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
+                className={`flex-1 sm:flex-initial px-2.5 sm:px-3.5 py-2 rounded-xl text-[11px] sm:text-xs font-extrabold transition-all cursor-pointer whitespace-nowrap text-center ${
                   activeTab === 'sports' ? 'bg-[#FFCB05] text-[#2A2B2E] shadow-xs' : 'text-[#8C6D1F] hover:text-[#2A2B2E]'
                 }`}
               >
@@ -355,7 +355,7 @@ export default function App() {
               <button
                 type="button"
                 onClick={() => setActiveTab('saving')}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
+                className={`flex-1 sm:flex-initial px-2.5 sm:px-3.5 py-2 rounded-xl text-[11px] sm:text-xs font-extrabold transition-all cursor-pointer whitespace-nowrap text-center ${
                   activeTab === 'saving' ? 'bg-[#FFCB05] text-[#2A2B2E] shadow-xs' : 'text-[#8C6D1F] hover:text-[#2A2B2E]'
                 }`}
               >
@@ -725,32 +725,32 @@ export default function App() {
                 </h2>
 
                 {/* Quick Shortcut Buttons */}
-                <div className="flex flex-wrap gap-2">
+                <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2">
                   <button 
                     type="button"
                     onClick={() => handleAddExtraSaving(500000, 'Tabungan Ekstra 500rb')}
-                    className="px-3 py-1.5 bg-white hover:bg-[#FFE57F] border border-[#FFE082] rounded-xl text-xs font-extrabold text-[#2A2B2E] transition-all cursor-pointer active:scale-95"
+                    className="px-3 py-2 bg-white hover:bg-[#FFE57F] border border-[#FFE082] rounded-xl text-xs font-extrabold text-[#2A2B2E] transition-all cursor-pointer active:scale-95 text-center"
                   >
                     + Rp 500rb
                   </button>
                   <button 
                     type="button"
                     onClick={() => handleAddExtraSaving(1000000, 'Tabungan Ekstra 1 Juta')}
-                    className="px-3 py-1.5 bg-white hover:bg-[#FFE57F] border border-[#FFE082] rounded-xl text-xs font-extrabold text-[#2A2B2E] transition-all cursor-pointer active:scale-95"
+                    className="px-3 py-2 bg-white hover:bg-[#FFE57F] border border-[#FFE082] rounded-xl text-xs font-extrabold text-[#2A2B2E] transition-all cursor-pointer active:scale-95 text-center"
                   >
                     + Rp 1 Juta
                   </button>
                   <button 
                     type="button"
                     onClick={() => handleAddExtraSaving(2000000, 'Tabungan Ekstra 2 Juta')}
-                    className="px-3 py-1.5 bg-white hover:bg-[#FFE57F] border border-[#FFE082] rounded-xl text-xs font-extrabold text-[#2A2B2E] transition-all cursor-pointer active:scale-95"
+                    className="px-3 py-2 bg-white hover:bg-[#FFE57F] border border-[#FFE082] rounded-xl text-xs font-extrabold text-[#2A2B2E] transition-all cursor-pointer active:scale-95 text-center"
                   >
                     + Rp 2 Juta
                   </button>
                   <button 
                     type="button"
                     onClick={() => handleAddExtraSaving(5000000, 'Tabungan Ekstra 5 Juta')}
-                    className="px-3 py-1.5 bg-[#FFCB05] hover:bg-[#E5B700] border border-[#F59E0B] rounded-xl text-xs font-extrabold text-[#2A2B2E] transition-all cursor-pointer active:scale-95"
+                    className="px-3 py-2 bg-[#FFCB05] hover:bg-[#E5B700] border border-[#F59E0B] rounded-xl text-xs font-extrabold text-[#2A2B2E] transition-all cursor-pointer active:scale-95 text-center"
                   >
                     + Rp 5 Juta
                   </button>
