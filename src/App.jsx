@@ -618,12 +618,17 @@ export default function App() {
 
       const { data: notesData, error: notesError } = await supabase.from('notes').select('*').order('created_at', { ascending: false });
       if (!notesError && notesData) {
-        setNotes(notesData);
-        try {
-          localStorage.setItem('alysa_notes_cache', JSON.stringify(notesData));
-        } catch (e) {
-          console.log('Cache save err:', e);
-        }
+        setNotes(prev => {
+          const serverIds = new Set(notesData.map(n => n.id));
+          const localOnly = prev.filter(n => !serverIds.has(n.id));
+          const merged = [...localOnly, ...notesData];
+          try {
+            localStorage.setItem('alysa_notes_cache', JSON.stringify(merged));
+          } catch (e) {
+            console.log('Cache save err:', e);
+          }
+          return merged;
+        });
       }
       
       const { data: foldersData, error: foldersError } = await supabase.from('folders').select('*').order('created_at', { ascending: false });
@@ -741,7 +746,13 @@ export default function App() {
 
     // Insert to Supabase DB
     await supabase.from('notes').insert([newNote]);
-    setNotes(prev => [newNote, ...prev]);
+    setNotes(prev => {
+      const updated = [newNote, ...prev.filter(n => n.id !== newNote.id)];
+      try {
+        localStorage.setItem('alysa_notes_cache', JSON.stringify(updated));
+      } catch (e) {}
+      return updated;
+    });
     setIsNoteModalOpen(false);
 
     // Reset Form
@@ -771,7 +782,13 @@ export default function App() {
   const handleDeleteNote = async (id) => {
     if (confirm('Delete this note?')) {
       await supabase.from('notes').delete().eq('id', id);
-      setNotes(notes.filter(n => n.id !== id));
+      setNotes(prev => {
+        const updated = prev.filter(n => n.id !== id);
+        try {
+          localStorage.setItem('alysa_notes_cache', JSON.stringify(updated));
+        } catch (e) {}
+        return updated;
+      });
     }
   };
 
@@ -948,7 +965,13 @@ export default function App() {
       if (insertError) {
         console.error('Supabase insert error:', insertError);
       }
-      setNotes(prev => [newNote, ...prev]);
+      setNotes(prev => {
+        const updated = [newNote, ...prev.filter(n => n.id !== newNote.id)];
+        try {
+          localStorage.setItem('alysa_notes_cache', JSON.stringify(updated));
+        } catch (e) {}
+        return updated;
+      });
     }
   };
 
