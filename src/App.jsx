@@ -702,10 +702,10 @@ export default function App() {
       )
       .subscribe();
 
-    // Polling backup every 8 seconds for guaranteed live sync
+    // Polling backup every 2 seconds for ultra-fast 1-2s live sync
     const pollInterval = setInterval(() => {
       fetchData();
-    }, 8000);
+    }, 2000);
 
     return () => {
       supabase.removeChannel(notesChannel);
