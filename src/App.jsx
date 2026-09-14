@@ -2348,16 +2348,18 @@ export default function App() {
                         </span>
                       </button>
 
-                      <button
-                        onClick={() => {
-                          setEditTextContent(formatCleanNoteContent(activeNoteModal.content));
-                          setIsEditingText(true);
-                        }}
-                        className="text-xs font-bold text-[#8C5E32] hover:text-[#5C3E20] bg-white border border-[#E8DAC8] hover:border-[#C89B68] hover:bg-[#FAF0E6] px-3 py-1.5 rounded-xl flex items-center gap-1.5 transition-all shadow-sm active:scale-95"
-                      >
-                        <SquarePen size={13} />
-                        <span>Edit Text</span>
-                      </button>
+                      {formatCleanNoteContent(activeNoteModal.content) ? (
+                        <button
+                          onClick={() => {
+                            setEditTextContent(formatCleanNoteContent(activeNoteModal.content));
+                            setIsEditingText(true);
+                          }}
+                          className="text-xs font-bold text-[#8C5E32] hover:text-[#5C3E20] bg-white border border-[#E8DAC8] hover:border-[#C89B68] hover:bg-[#FAF0E6] px-3 py-1.5 rounded-xl flex items-center gap-1.5 transition-all shadow-sm active:scale-95"
+                        >
+                          <SquarePen size={13} />
+                          <span>Edit Text</span>
+                        </button>
+                      ) : null}
                     </div>
                   ) : (
                     <div className="flex items-center gap-2">
@@ -2398,7 +2400,7 @@ export default function App() {
                     </div>
                   ) : (
                     <div className="text-center py-4 text-[#8A7977] text-xs italic">
-                      No text content yet. Click <span className="font-bold text-[#8C5E32] not-italic">"Edit Text"</span> above to begin writing notes.
+                      No text content yet. Click <span className="font-bold text-[#8C5E32] not-italic">"AI Scan"</span> above to extract text using AI.
                     </div>
                   )
                 )}
