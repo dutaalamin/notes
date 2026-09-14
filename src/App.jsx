@@ -814,18 +814,12 @@ export default function App() {
 
   // Derive user notes & folders based on logged in user identity
   const userNotes = useMemo(() => {
-    if (!currentUser || currentUser.id === 'demo-alysa') {
-      return notes.filter(n => !n.user_id || n.user_id === 'demo-alysa' || n.user_id === 'alysa');
-    }
-    return notes.filter(n => n.user_id === currentUser.id);
-  }, [notes, currentUser?.id]);
+    return notes;
+  }, [notes]);
 
   const userFolders = useMemo(() => {
-    if (!currentUser || currentUser.id === 'demo-alysa') {
-      return folders.filter(f => !f.user_id || f.user_id === 'demo-alysa' || f.user_id === 'alysa');
-    }
-    return folders.filter(f => f.user_id === currentUser.id);
-  }, [folders, currentUser?.id]);
+    return folders;
+  }, [folders]);
 
   // Filter notes
   const filteredNotes = userNotes.filter(n => {
@@ -844,7 +838,7 @@ export default function App() {
     return matchesNav && matchesFolder && matchesSearch;
   });
 
-  const compressImageAsDataURL = (file, maxWidth = 1200, maxHeight = 1200, quality = 0.75) => {
+  const compressImageAsDataURL = (file, maxWidth = 700, maxHeight = 700, quality = 0.6) => {
     return new Promise((resolve) => {
       const reader = new FileReader();
       reader.onload = (e) => {
