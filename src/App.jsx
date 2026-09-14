@@ -752,39 +752,12 @@ export default function App() {
       )
       .subscribe();
 
-    // 4. Polling backup every 5 seconds with zero-memory change detection
-    const pollInterval = setInterval(() => {
-      fetchData();
-    }, 5000);
-
     return () => {
       supabase.removeChannel(broadcastChannel);
       supabase.removeChannel(notesChannel);
       supabase.removeChannel(foldersChannel);
-      clearInterval(pollInterval);
     };
   }, []);
-
-  // Continuous local cache updates
-  useEffect(() => {
-    try {
-      if (notes.length > 0) {
-        localStorage.setItem('alysa_notes_cache', JSON.stringify(notes));
-      }
-    } catch (e) {
-      console.log('Cache sync notes err:', e);
-    }
-  }, [notes]);
-
-  useEffect(() => {
-    try {
-      if (folders.length > 0) {
-        localStorage.setItem('alysa_folders_cache', JSON.stringify(folders));
-      }
-    } catch (e) {
-      console.log('Cache sync folders err:', e);
-    }
-  }, [folders]);
 
   const handleAddNote = async (e) => {
     e.preventDefault();
