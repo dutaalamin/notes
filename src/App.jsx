@@ -300,8 +300,8 @@ export default function App() {
   const [isEditingText, setIsEditingText] = useState(false);
   const [editTextContent, setEditTextContent] = useState('');
 
-  // Auth & User States
-  const [currentUser, setCurrentUser] = useState(null);
+  // Auth & User States (Default active profile Alysa - bypass login)
+  const [currentUser, setCurrentUser] = useState({ id: 'demo-alysa', email: 'alysa@stoody.id', user_metadata: { full_name: 'Alysa' } });
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState('login'); // 'login' | 'register'
   const [authEmail, setAuthEmail] = useState('');
@@ -437,11 +437,15 @@ export default function App() {
   // Listen to Supabase Auth State
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setCurrentUser(session?.user || null);
+      if (session?.user) {
+        setCurrentUser(session.user);
+      }
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setCurrentUser(session?.user || null);
+      if (session?.user) {
+        setCurrentUser(session.user);
+      }
     });
 
     return () => subscription.unsubscribe();
@@ -599,7 +603,7 @@ export default function App() {
     try {
       await supabase.auth.signOut();
     } catch (e) {}
-    setCurrentUser(null);
+    setCurrentUser({ id: 'demo-alysa', email: 'alysa@stoody.id', user_metadata: { full_name: 'Alysa' } });
   };
 
   const [isCloudConnected, setIsCloudConnected] = useState(true);
