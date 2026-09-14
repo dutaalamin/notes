@@ -1534,30 +1534,7 @@ export default function App() {
                           </div>
                         </div>
 
-                        {/* Action List */}
-                        <div className="space-y-1">
-                          <button
-                            onClick={() => {
-                              setIsProfileDropdownOpen(false);
-                              setIsChangePasswordModalOpen(true);
-                            }}
-                            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold ${t.textMain} hover:${t.bgCardSubtle} transition-all`}
-                          >
-                            <Lock size={15} className={t.textAccent} />
-                            <span>Change Password</span>
-                          </button>
 
-                          <button
-                            onClick={() => {
-                              setIsProfileDropdownOpen(false);
-                              handleSignOut();
-                            }}
-                            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-red-500 hover:bg-red-50 transition-all"
-                          >
-                            <LogOut size={15} />
-                            <span>Sign Out</span>
-                          </button>
-                        </div>
                       </motion.div>
                     </>
                   )}
@@ -2584,117 +2561,7 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      {/* CHANGE PASSWORD MODAL */}
-      <AnimatePresence>
-        {isChangePasswordModalOpen && (
-          <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 10 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 10 }}
-              className="bg-[#FAF4EC] border border-[#E8DAC8] rounded-3xl p-6 max-w-sm w-full shadow-2xl relative"
-            >
-              <button
-                onClick={() => setIsChangePasswordModalOpen(false)}
-                className="absolute top-4 right-4 p-2 text-[#8A7977] hover:text-[#4A3E3C] rounded-full transition-all"
-              >
-                <X size={18} />
-              </button>
 
-              <div className="flex items-center gap-2.5 mb-4">
-                <div className="w-9 h-9 rounded-xl bg-[#C89B68] text-white flex items-center justify-center shadow-sm">
-                  <Lock size={18} />
-                </div>
-                <div>
-                  <h3 className="text-sm font-extrabold text-[#4A3E3C]">Change Password</h3>
-                  <p className="text-[11px] text-[#8A7977]">Update your account password</p>
-                </div>
-              </div>
-
-              <form
-                onSubmit={async (e) => {
-                  e.preventDefault();
-                  if (newPassword !== confirmPassword) {
-                    setPasswordError("Passwords do not match");
-                    return;
-                  }
-                  setPasswordLoading(true);
-                  try {
-                    const { error } = await supabase.auth.updateUser({ password: newPassword });
-                    if (error) throw error;
-                    setPasswordSuccess("Password updated successfully!");
-                    setTimeout(() => {
-                      setIsChangePasswordModalOpen(false);
-                      setPasswordSuccess("");
-                      setNewPassword("");
-                      setConfirmPassword("");
-                    }, 1200);
-                  } catch (err) {
-                    setPasswordError(err.message || "Failed to update password");
-                  } finally {
-                    setPasswordLoading(false);
-                  }
-                }}
-                className="space-y-3.5"
-              >
-                {passwordError && (
-                  <div className="p-2.5 bg-red-50 border border-red-200 text-red-600 text-xs font-bold rounded-xl">
-                    {passwordError}
-                  </div>
-                )}
-                {passwordSuccess && (
-                  <div className="p-2.5 bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold rounded-xl">
-                    {passwordSuccess}
-                  </div>
-                )}
-
-                <div className="space-y-1">
-                  <label className="text-[10px] font-extrabold text-[#4A3E3C] uppercase">New Password</label>
-                  <input
-                    type="password"
-                    required
-                    minLength={6}
-                    placeholder="••••••••"
-                    value={newPassword}
-                    onChange={(e) => { setNewPassword(e.target.value); setPasswordError(""); }}
-                    className="w-full bg-white border border-[#E8DAC8] rounded-xl px-3 py-2 text-xs text-[#4A3E3C] focus:outline-none focus:ring-2 focus:ring-[#C89B68]/30 font-medium"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-[10px] font-extrabold text-[#4A3E3C] uppercase">Confirm New Password</label>
-                  <input
-                    type="password"
-                    required
-                    minLength={6}
-                    placeholder="••••••••"
-                    value={confirmPassword}
-                    onChange={(e) => { setConfirmPassword(e.target.value); setPasswordError(""); }}
-                    className="w-full bg-white border border-[#E8DAC8] rounded-xl px-3 py-2 text-xs text-[#4A3E3C] focus:outline-none focus:ring-2 focus:ring-[#C89B68]/30 font-medium"
-                  />
-                </div>
-
-                <div className="pt-2 flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setIsChangePasswordModalOpen(false)}
-                    className="flex-1 bg-[#FAF0E6] border border-[#E8DAC8] text-[#4A3E3C] font-bold text-xs py-2.5 rounded-xl transition-all"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={passwordLoading}
-                    className="flex-1 bg-[#C89B68] hover:bg-[#B88B58] text-white font-extrabold text-xs py-2.5 rounded-xl shadow-md transition-all active:scale-95 disabled:opacity-50"
-                  >
-                    {passwordLoading ? 'Updating...' : 'Save Password'}
-                  </button>
-                </div>
-              </form>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
 
     </div>
   );
