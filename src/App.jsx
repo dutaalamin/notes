@@ -670,92 +670,46 @@ export default function App() {
   useEffect(() => {
     fetchData();
 
-    // 1. Instant WebSocket Broadcast Channel (Sub-second / 0s P2P Sync)
-    const broadcastChannel = supabase.channel('stoody_live_broadcast');
-    broadcastChannelRef.current = broadcastChannel;
+    // 1. Unified Single WebSocket Realtime Channel (Broadcast + Postgres Changes)
+    const unifiedChannel = supabase.channel('stoody_unified_channel');
+    broadcastChannelRef.current = unifiedChannel;
 
-    broadcastChannel
+    unifiedChannel
       .on('broadcast', { event: 'INSERT_NOTE' }, ({ payload }) => {
-        if (payload && payload.id) {
-          setNotes((prev) => prev.some(n => n.id === payload.id) ? prev : [payload, ...prev]);
-        }
+        if (payload?.id) setNotes((prev) => prev.some(n => n.id === payload.id) ? prev : [payload, ...prev]);
       })
       .on('broadcast', { event: 'DELETE_NOTE' }, ({ payload }) => {
-        if (payload && payload.id) {
-          setNotes((prev) => prev.filter(n => n.id !== payload.id));
-        }
+        if (payload?.id) setNotes((prev) => prev.filter(n => n.id !== payload.id));
       })
       .on('broadcast', { event: 'UPDATE_NOTE' }, ({ payload }) => {
-        if (payload && payload.id) {
-          setNotes((prev) => prev.map(n => n.id === payload.id ? payload : n));
-        }
+        if (payload?.id) setNotes((prev) => prev.map(n => n.id === payload.id ? payload : n));
       })
       .on('broadcast', { event: 'INSERT_FOLDER' }, ({ payload }) => {
-        if (payload && payload.id) {
-          setFolders((prev) => prev.some(f => f.id === payload.id) ? prev : [payload, ...prev]);
-        }
+        if (payload?.id) setFolders((prev) => prev.some(f => f.id === payload.id) ? prev : [payload, ...prev]);
       })
       .on('broadcast', { event: 'DELETE_FOLDER' }, ({ payload }) => {
-        if (payload && payload.id) {
-          setFolders((prev) => prev.filter(f => f.id !== payload.id));
+        if (payload?.id) setFolders((prev) => prev.filter(f => f.id !== payload.id));
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'notes' }, (payload) => {
+        if (payload.eventType === 'INSERT') {
+          setNotes((prev) => prev.some(n => n.id === payload.new.id) ? prev : [payload.new, ...prev]);
+        } else if (payload.eventType === 'DELETE') {
+          setNotes((prev) => prev.filter(n => n.id !== payload.old.id));
+        } else if (payload.eventType === 'UPDATE') {
+          setNotes((prev) => prev.map(n => n.id === payload.new.id ? payload.new : n));
         }
       })
-      .subscribe();
-
-    // 2. Real-time Postgres listener for 'notes' table
-    const notesChannel = supabase
-      .channel('realtime_notes_live')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'notes' },
-        (payload) => {
-          if (payload.eventType === 'INSERT') {
-            setNotes((prev) => {
-              if (prev.some(n => n.id === payload.new.id)) return prev;
-              const updated = [payload.new, ...prev];
-              try { localStorage.setItem('alysa_notes_cache', JSON.stringify(updated)); } catch (e) {}
-              return updated;
-            });
-          } else if (payload.eventType === 'DELETE') {
-            setNotes((prev) => {
-              const updated = prev.filter(n => n.id !== payload.old.id);
-              try { localStorage.setItem('alysa_notes_cache', JSON.stringify(updated)); } catch (e) {}
-              return updated;
-            });
-          } else if (payload.eventType === 'UPDATE') {
-            setNotes((prev) => {
-              const updated = prev.map(n => n.id === payload.new.id ? payload.new : n);
-              try { localStorage.setItem('alysa_notes_cache', JSON.stringify(updated)); } catch (e) {}
-              return updated;
-            });
-          }
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'folders' }, (payload) => {
+        if (payload.eventType === 'INSERT') {
+          setFolders((prev) => prev.some(f => f.id === payload.new.id) ? prev : [payload.new, ...prev]);
+        } else if (payload.eventType === 'DELETE') {
+          setFolders((prev) => prev.filter(f => f.id !== payload.old.id));
         }
-      )
-      .subscribe();
-
-    // 3. Real-time Postgres listener for 'folders' table
-    const foldersChannel = supabase
-      .channel('realtime_folders_live')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'folders' },
-        (payload) => {
-          if (payload.eventType === 'INSERT') {
-            setFolders((prev) => {
-              if (prev.some(f => f.id === payload.new.id)) return prev;
-              return [payload.new, ...prev];
-            });
-          } else if (payload.eventType === 'DELETE') {
-            setFolders((prev) => prev.filter(f => f.id !== payload.old.id));
-          }
-        }
-      )
+      })
       .subscribe();
 
     return () => {
-      supabase.removeChannel(broadcastChannel);
-      supabase.removeChannel(notesChannel);
-      supabase.removeChannel(foldersChannel);
+      supabase.removeChannel(unifiedChannel);
     };
   }, []);
 
