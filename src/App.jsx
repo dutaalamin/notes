@@ -81,34 +81,20 @@ export default function App() {
   // --- TAB 1: SALDO & PENGELUARAN ---
   const [currentBalance, setCurrentBalance] = useState(() => {
     const saved = localStorage.getItem('my_current_balance');
-    return saved ? parseInt(saved, 10) : 1000000;
+    return saved !== null ? parseInt(saved, 10) : 0;
   });
   const [isEditingBalance, setIsEditingBalance] = useState(false);
   const [tempBalanceInput, setTempBalanceInput] = useState('');
 
-  // Initial Expense List
-  const defaultExpenseItems = [
-    { id: '1', date: getTodayDateDisplay(), category: 'Makanan', title: 'Makan Siang Warteg', amount: 25000 },
-    { id: '2', date: getTodayDateDisplay(), category: 'Bensin', title: 'Isi Pertamax', amount: 50000 },
-    { id: '3', date: getTodayDateDisplay(), category: 'Minuman', title: 'Kopi Kenangan', amount: 20000 },
-    { id: '4', date: '12 Sep 2026', category: 'Cukur Rambut', title: 'Potong Rambut', amount: 45000 }
-  ];
-
   const [expenseList, setExpenseList] = useState(() => {
     const saved = localStorage.getItem('my_expenses_data');
-    if (!saved) return defaultExpenseItems;
-    const parsed = JSON.parse(saved);
-    if (!parsed || parsed.length === 0) return defaultExpenseItems;
-    return parsed.map(item => {
-      if (item.category && item.category !== 'Lainnya') return item;
-      const titleLower = (item.title || '').toLowerCase();
-      if (titleLower.includes('makan') || titleLower.includes('warteg')) return { ...item, category: 'Makanan' };
-      if (titleLower.includes('bensin') || titleLower.includes('pertamax')) return { ...item, category: 'Bensin' };
-      if (titleLower.includes('kopi') || titleLower.includes('minum')) return { ...item, category: 'Minuman' };
-      if (titleLower.includes('cukur') || titleLower.includes('rambut')) return { ...item, category: 'Cukur Rambut' };
-      if (titleLower.includes('parkir')) return { ...item, category: 'Parkir' };
-      return { ...item, category: 'Makanan' };
-    });
+    if (!saved) return [];
+    try {
+      const parsed = JSON.parse(saved);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
   });
 
   const [expDate, setExpDate] = useState(getTodayDateISO());
@@ -119,11 +105,13 @@ export default function App() {
   // --- TAB 2: OLAHRAGA ---
   const [sportsList, setSportsList] = useState(() => {
     const saved = localStorage.getItem('my_sports_data');
-    return saved ? JSON.parse(saved) : [
-      { id: '1', date: getTodayDateDisplay(), sport: 'Gym', note: 'Push Day - Benchpress 4 Set' },
-      { id: '2', date: getTodayDateDisplay(), sport: 'Lari', note: 'Lari Pagi 5 KM Pace 6:00' },
-      { id: '3', date: '12 Sep 2026', sport: 'Bola', note: 'Futsal 1 Jam' }
-    ];
+    if (!saved) return [];
+    try {
+      const parsed = JSON.parse(saved);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
   });
   const [sportDate, setSportDate] = useState(getTodayDateISO());
   const [sportType, setSportType] = useState('Gym');
@@ -151,13 +139,13 @@ export default function App() {
     try {
       setIsSyncing(true);
       const { data: eData } = await supabase.from('daily_expenses').select('*').order('created_at', { ascending: false });
-      if (eData && eData.length > 0) setExpenseList(eData);
+      if (eData) setExpenseList(eData);
 
       const { data: spData } = await supabase.from('daily_sports').select('*').order('created_at', { ascending: false });
-      if (spData && spData.length > 0) setSportsList(spData);
+      if (spData) setSportsList(spData);
 
       const { data: savData } = await supabase.from('bonus_savings').select('*').order('created_at', { ascending: false });
-      if (savData && savData.length > 0) setBonusSavingsList(savData);
+      if (savData) setBonusSavingsList(savData);
     } catch (err) {
       console.log('Sync info:', err);
     } finally {
