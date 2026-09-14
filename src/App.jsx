@@ -380,7 +380,7 @@ export default function App() {
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-[#FFE082]/70 pb-5">
                   <div>
                     <span className="text-[11px] text-[#D97706] font-extrabold uppercase tracking-wider block mb-1">
-                      💳 SALDO GUA SEKARANG
+                      💳 SALDO DUTA SEKARANG
                     </span>
                     
                     {isEditingBalance ? (
