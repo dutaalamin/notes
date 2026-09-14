@@ -320,14 +320,10 @@ export default function App() {
   const [passwordSuccess, setPasswordSuccess] = useState('');
   const [passwordLoading, setPasswordLoading] = useState(false);
 
-  // Automatic Theme Assignment: Budi -> Snoopy Red, Alysa / default -> Pastel Warm
+  // Default Theme Assignment: Alysa / Pastel Warm
   const currentTheme = useMemo(() => {
-    if (!currentUser) return 'pastel';
-    const isBudi = currentUser.id === 'demo-budi' || 
-                   currentUser.email?.toLowerCase().includes('budi') || 
-                   currentUser.user_metadata?.full_name?.toLowerCase() === 'budi';
-    return isBudi ? 'snoopy' : 'pastel';
-  }, [currentUser]);
+    return 'pastel';
+  }, []);
 
   const t = THEMES[currentTheme] || THEMES.pastel;
 
@@ -461,7 +457,7 @@ export default function App() {
     const inputPass = authPassword.trim();
     const cleanUsername = inputEmail.split('@')[0].replace(/[^a-z0-9_-]/g, '') || 'user';
 
-    // Check for quick demo login credentials (alysa / alysa123 or budi / budi123)
+    // Check for quick demo login credentials (alysa / alysa123)
     if (inputEmail === 'alysa' || inputEmail.startsWith('alysa@')) {
       if (inputPass === 'alysa123' || !inputPass || inputPass === 'alysa') {
         handleDemoAccountSwitch('Alysa', 'alysa@stoody.id');
@@ -472,15 +468,6 @@ export default function App() {
       }
     }
 
-    if (inputEmail === 'budi' || inputEmail.startsWith('budi@')) {
-      if (inputPass === 'budi123' || !inputPass || inputPass === 'budi') {
-        handleDemoAccountSwitch('Budi', 'budi@stoody.id');
-        setAuthLoading(false);
-        setAuthEmail('');
-        setAuthPassword('');
-        return;
-      }
-    }
 
     // Format email to a valid domain structure for Supabase Auth validation
     let formattedEmail = inputEmail;
@@ -598,10 +585,9 @@ export default function App() {
     }
   };
 
-  const handleDemoAccountSwitch = (name, email) => {
-    const isBudi = name.toLowerCase() === 'budi';
+  const handleDemoAccountSwitch = (name = 'Alysa', email = 'alysa@stoody.id') => {
     const demoUser = {
-      id: isBudi ? 'demo-budi' : 'demo-alysa',
+      id: 'demo-alysa',
       email: email,
       user_metadata: { full_name: name }
     };
@@ -2438,18 +2424,12 @@ export default function App() {
                 <p className="text-[11px] text-[#8A7977] font-semibold mb-2.5">
                   ⚡ Quick Demo Access:
                 </p>
-                <div className="flex items-center justify-center gap-2">
+                <div className="flex items-center justify-center">
                   <button
                     onClick={() => handleDemoAccountSwitch('Alysa', 'alysa@stoody.id')}
-                    className="bg-white border border-[#E8DAC8] hover:border-[#C89B68] text-[#8C5E32] text-xs font-bold py-1.5 px-3 rounded-xl transition-all shadow-xs active:scale-95"
+                    className="bg-white border border-[#E8DAC8] hover:border-[#C89B68] text-[#8C5E32] text-xs font-bold py-2 px-5 rounded-xl transition-all shadow-xs active:scale-95 flex items-center gap-2"
                   >
-                    🌸 Alysa Account
-                  </button>
-                  <button
-                    onClick={() => handleDemoAccountSwitch('Budi', 'budi@stoody.id')}
-                    className="bg-white border border-[#E8DAC8] hover:border-[#C89B68] text-[#8C5E32] text-xs font-bold py-1.5 px-3 rounded-xl transition-all shadow-xs active:scale-95"
-                  >
-                    🧢 Budi Account
+                    🌸 Quick Login as Alysa
                   </button>
                 </div>
               </div>
